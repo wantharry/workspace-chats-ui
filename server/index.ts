@@ -93,11 +93,11 @@ app.get("/api/sessions/:sessionId", (req, res) => {
           return { id: e.id, type: "assistant", content: d.content || "", timestamp: e.timestamp, reasoningText: d.reasoningText || "", toolRequests: d.toolRequests || [] };
         }
         if (e.type === "tool.execution_start") {
-          const d = e.data as { toolCallId?: string; name?: string; arguments?: string };
-          return { id: e.id, type: "tool_start", toolCallId: d.toolCallId, name: d.name, arguments: d.arguments, timestamp: e.timestamp };
+          const d = e.data as { toolCallId?: string; toolName?: string; arguments?: Record<string, unknown> };
+          return { id: e.id, type: "tool_start", toolCallId: d.toolCallId, name: d.toolName, arguments: d.arguments ? JSON.stringify(d.arguments, null, 2) : undefined, timestamp: e.timestamp };
         }
-        const d = e.data as { toolCallId?: string; result?: unknown };
-        return { id: e.id, type: "tool_complete", toolCallId: d.toolCallId, result: d.result, timestamp: e.timestamp };
+        const d = e.data as { toolCallId?: string; success?: boolean };
+        return { id: e.id, type: "tool_complete", toolCallId: d.toolCallId, success: d.success ?? true, timestamp: e.timestamp };
       });
     res.json({ id: sessionId, workspaceId, workspaceName: ws?.name || workspaceId, folder: ws?.folder || "", startTime: start?.timestamp || "", messages });
   } catch (err) { res.status(500).json({ error: String(err) }); }

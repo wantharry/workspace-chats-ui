@@ -34,6 +34,7 @@ export interface ChatMessage {
   name?: string;
   arguments?: string;
   result?: unknown;
+  success?: boolean;
 }
 
 export interface Session {
