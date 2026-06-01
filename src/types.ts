@@ -33,7 +33,7 @@ export interface ChatMessage {
   toolCallId?: string;
   name?: string;
   arguments?: string;
-  result?: unknown;
+  result?: string;
   success?: boolean;
 }
 

@@ -53,6 +53,25 @@ function parseSession(workspaceId: string, sessionId: string): Entry[] {
   return fs.readFileSync(fp, "utf-8").split("\n").filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) as Entry[];
 }
 
+/** Build map of toolCallId -> content from chat-session-resources content.txt files */
+function loadToolResults(workspaceId: string, sessionId: string): Map<string, string> {
+  const sp = getStoragePath();
+  const resDir = path.join(sp, workspaceId, "GitHub.copilot-chat", "chat-session-resources", sessionId);
+  const map = new Map<string, string>();
+  if (!fs.existsSync(resDir)) return map;
+  for (const folder of fs.readdirSync(resDir)) {
+    // Folder name format: {toolCallId}__vscode-{timestamp}
+    const toolCallId = folder.split("__vscode-")[0];
+    const contentPath = path.join(resDir, folder, "content.txt");
+    if (toolCallId && fs.existsSync(contentPath)) {
+      try {
+        map.set(toolCallId, fs.readFileSync(contentPath, "utf-8"));
+      } catch { /* skip unreadable */ }
+    }
+  }
+  return map;
+}
+
 function sessionMeta(ws: WsMeta, sid: string) {
   const entries = parseSession(ws.id, sid);
   const start = entries.find(e => e.type === "session.start");
@@ -78,6 +97,7 @@ app.get("/api/sessions/:sessionId", (req, res) => {
     const workspaceId = req.query.workspaceId as string;
     if (!workspaceId) return res.status(400).json({ error: "workspaceId required" });
     const entries = parseSession(workspaceId, sessionId);
+    const toolResults = loadToolResults(workspaceId, sessionId);
     const start = entries.find(e => e.type === "session.start");
     const wss = loadWorkspaces();
     const ws = wss.find(w => w.id === workspaceId);
@@ -97,7 +117,8 @@ app.get("/api/sessions/:sessionId", (req, res) => {
           return { id: e.id, type: "tool_start", toolCallId: d.toolCallId, name: d.toolName, arguments: d.arguments ? JSON.stringify(d.arguments, null, 2) : undefined, timestamp: e.timestamp };
         }
         const d = e.data as { toolCallId?: string; success?: boolean };
-        return { id: e.id, type: "tool_complete", toolCallId: d.toolCallId, success: d.success ?? true, timestamp: e.timestamp };
+        const resultContent = d.toolCallId ? toolResults.get(d.toolCallId) : undefined;
+        return { id: e.id, type: "tool_complete", toolCallId: d.toolCallId, success: d.success ?? true, result: resultContent, timestamp: e.timestamp };
       });
     res.json({ id: sessionId, workspaceId, workspaceName: ws?.name || workspaceId, folder: ws?.folder || "", startTime: start?.timestamp || "", messages });
   } catch (err) { res.status(500).json({ error: String(err) }); }

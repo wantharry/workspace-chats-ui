@@ -68,11 +68,40 @@ function ToolCallCard({ msg }: { msg: ChatMessage }) {
 }
 
 function ToolResultCard({ msg }: { msg: ChatMessage }) {
+  const [open, setOpen] = useState(false);
   const success = msg.success !== false;
+  const hasContent = !!msg.result;
+  const TRUNCATE = 4000;
+  const content = msg.result || "";
+
+  if (!hasContent) {
+    return (
+      <div style={{ margin: "4px 0 4px 20px", display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", background: success ? "rgba(34,197,94,0.07)" : "rgba(239,68,68,0.07)", border: `1px solid ${success ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 6 }}>
+        <Wrench size={11} color={success ? "#22c55e" : "#ef4444"} />
+        <span style={{ fontSize: 11, color: success ? "#22c55e" : "#ef4444" }}>{success ? "Success" : "Failed"}</span>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ margin: "4px 0 4px 20px", display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", background: success ? "rgba(34,197,94,0.07)" : "rgba(239,68,68,0.07)", border: `1px solid ${success ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: 6 }}>
-      <Wrench size={11} color={success ? "#22c55e" : "#ef4444"} />
-      <span style={{ fontSize: 11, color: success ? "#22c55e" : "#ef4444" }}>{success ? "Success" : "Failed"}</span>
+    <div style={{ margin: "4px 0 4px 20px", background: "#050510", border: "1px solid #0f172a", borderRadius: 8, overflow: "hidden" }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", background: "none", border: "none", cursor: "pointer", color: "#475569", textAlign: "left" }}
+      >
+        <Wrench size={12} color={success ? "#22c55e" : "#ef4444"} />
+        <span style={{ fontSize: 11, flex: 1, color: success ? "#22c55e" : "#ef4444" }}>
+          {success ? "Output" : "Error"} <span style={{ color: "#334155", fontWeight: 400 }}>({content.length.toLocaleString()} chars)</span>
+        </span>
+        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+      </button>
+      {open && (
+        <div style={{ padding: "0 12px 10px", borderTop: "1px solid #0f172a" }}>
+          <pre style={{ fontSize: 11, color: "#94a3b8", margin: "8px 0 0", whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 320, overflowY: "auto", lineHeight: 1.5 }}>
+            {content.length > TRUNCATE ? content.slice(0, TRUNCATE) + `\n\n… (${(content.length - TRUNCATE).toLocaleString()} more chars)` : content}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
